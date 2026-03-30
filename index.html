@@ -22,12 +22,13 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            touch-action: manipulation; /* Verhindert das Zoomen beim Tippen */
+            touch-action: manipulation;
+            padding: 20px 0; /* Etwas Platz nach oben und unten für kleine Bildschirme */
         }
         .playing-card {
             background-color: var(--card-bg);
             width: 90%;
-            max-width: 380px;
+            max-width: 400px;
             border-radius: 15px;
             padding: 25px 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
@@ -60,11 +61,18 @@
             line-height: 1;
         }
         .status { 
-            font-size: 1.1rem; 
+            font-size: 1rem; 
             font-weight: bold; 
-            height: 30px; 
+            min-height: 24px; 
             color: var(--spade-black); 
+            margin-bottom: 10px;
+        }
+        .combat-log {
+            font-size: 0.9rem;
+            color: #666;
+            min-height: 20px;
             margin-bottom: 15px;
+            font-style: italic;
         }
 
         .section-title { 
@@ -76,32 +84,41 @@
             border-bottom: 1px solid #ccc; 
             padding-bottom: 5px;
             text-align: left;
+            display: flex;
+            justify-content: space-between;
         }
 
         .btn-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-            margin-bottom: 15px;
+            gap: 6px;
+            margin-bottom: 10px;
         }
         
         button {
             background: white;
             border: 2px solid;
             border-radius: 8px;
-            padding: 10px 0;
-            font-size: 1.1rem;
+            padding: 8px 0;
+            font-size: 0.95rem;
             font-weight: bold;
             cursor: pointer;
-            transition: transform 0.1s, background-color 0.2s;
-            min-height: 44px; /* Apple Standard für Touch-Buttons */
+            transition: all 0.1s;
+            min-height: 40px;
         }
         button:active { transform: scale(0.92); }
         button:disabled { opacity: 0.4; pointer-events: none; }
 
+        /* Waffe (Karo) */
+        .btn-weapon { color: var(--heart-red); border-color: var(--heart-red); }
+        .btn-weapon.active { background-color: var(--heart-red); color: white; transform: scale(1.05); box-shadow: 0 2px 8px rgba(211, 47, 47, 0.4); }
+        
+        /* Schaden (Pik/Kreuz) */
         .btn-dmg { color: var(--spade-black); border-color: var(--spade-black); }
         .btn-dmg:active { background-color: var(--spade-black); color: white; }
+        .btn-dmg.face-card { font-size: 0.85rem; } /* Etwas kleinere Schrift für Bube, Dame, etc. */
 
+        /* Heilung (Herz) */
         .btn-heal { color: var(--heart-red); border-color: var(--heart-red); }
         .btn-heal:active { background-color: var(--heart-red); color: white; }
 
@@ -111,9 +128,9 @@
             width: 100%;
             border: none;
             margin-top: 15px;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             border-radius: 8px;
-            padding: 15px;
+            padding: 12px;
         }
         .reset-btn:active { background-color: #000; }
     </style>
@@ -124,11 +141,20 @@
     <h1>SCOUNDREL</h1>
     <div class="hp-display" id="hp">20</div>
     <div class="status" id="status">Bereit für den Dungeon!</div>
+    <div class="combat-log" id="log"></div>
 
-    <div class="section-title">♠️ Schaden (1-14)</div>
+    <div class="section-title">
+        <span>♦️ Waffe (ausgerüstet)</span>
+        <span id="weapon-display">0</span>
+    </div>
+    <div class="btn-grid" id="weapon-grid">
+        <button class="btn-weapon active" id="btn-wpn-0" onclick="equipWeapon(0)">Keine</button>
+    </div>
+
+    <div class="section-title">♠️/♣️ Schaden (Monster)</div>
     <div class="btn-grid" id="dmg-grid"></div>
 
-    <div class="section-title">♥️ Heilung (2-10)</div>
+    <div class="section-title">♥️ Heilung Tränke</div>
     <div class="btn-grid" id="heal-grid"></div>
 
     <button class="reset-btn" onclick="resetGame()">Neues Spiel</button>
@@ -137,21 +163,43 @@
 <script>
     let currentHp = 20;
     const maxHp = 20;
-    const hpEl = document.getElementById('hp');
-    const statusEl = document.getElementById('status');
+    let currentWeapon = 0;
     let isDead = false;
 
-    // Schaden-Buttons (1-14) generieren
+    const hpEl = document.getElementById('hp');
+    const statusEl = document.getElementById('status');
+    const logEl = document.getElementById('log');
+    const weaponDisplay = document.getElementById('weapon-display');
+
+    // --- Waffen-Buttons (2-10) generieren ---
+    const weaponGrid = document.getElementById('weapon-grid');
+    for (let i = 2; i <= 10; i++) {
+        let btn = document.createElement('button');
+        btn.className = 'btn-weapon';
+        btn.id = 'btn-wpn-' + i;
+        btn.innerText = i;
+        btn.onclick = () => equipWeapon(i);
+        weaponGrid.appendChild(btn);
+    }
+
+    // --- Schaden-Buttons (1-14) generieren ---
     const dmgGrid = document.getElementById('dmg-grid');
     for (let i = 1; i <= 14; i++) {
         let btn = document.createElement('button');
         btn.className = 'btn-dmg';
-        btn.innerText = '-' + i;
-        btn.onclick = () => takeDamage(i);
+        
+        // Bildkarten benennen
+        if (i === 11) { btn.innerText = 'Bube'; btn.classList.add('face-card'); }
+        else if (i === 12) { btn.innerText = 'Dame'; btn.classList.add('face-card'); }
+        else if (i === 13) { btn.innerText = 'König'; btn.classList.add('face-card'); }
+        else if (i === 14) { btn.innerText = 'Ass'; btn.classList.add('face-card'); }
+        else { btn.innerText = i; }
+
+        btn.onclick = () => takeDamage(i, btn.innerText);
         dmgGrid.appendChild(btn);
     }
 
-    // Heilungs-Buttons (2-10) generieren
+    // --- Heilungs-Buttons (2-10) generieren ---
     const healGrid = document.getElementById('heal-grid');
     for (let i = 2; i <= 10; i++) {
         let btn = document.createElement('button');
@@ -182,31 +230,74 @@
         }
     }
 
-    function takeDamage(amount) {
+    function equipWeapon(value) {
         if (isDead) return;
-        currentHp -= amount;
+        currentWeapon = value;
+        weaponDisplay.innerText = value > 0 ? value : 'Keine';
+        
+        // Buttons visuell aktualisieren
+        document.querySelectorAll('.btn-weapon').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('btn-wpn-' + value).classList.add('active');
+        
+        if (value === 0) {
+            logEl.innerText = "Waffe abgelegt.";
+        } else {
+            logEl.innerText = `Waffe mit Stärke ${value} ausgerüstet.`;
+        }
+    }
+
+    function takeDamage(cardValue, cardName) {
+        if (isDead) return;
+        
+        // Waffe vom Schaden abziehen (min. 0)
+        let actualDamage = cardValue - currentWeapon;
+        if (actualDamage < 0) actualDamage = 0;
+
+        currentHp -= actualDamage;
         if (currentHp < 0) currentHp = 0;
+
+        // Log aktualisieren
+        if (currentWeapon > 0) {
+            if (actualDamage === 0) {
+                logEl.innerText = `Monster (${cardName}) komplett abgewehrt!`;
+            } else {
+                logEl.innerText = `Monster (${cardName}) macht ${actualDamage} Schaden (Waffe blockt ${currentWeapon}).`;
+            }
+        } else {
+            logEl.innerText = `Monster (${cardName}) macht ${actualDamage} Schaden.`;
+        }
+
         updateUI();
     }
 
     function heal(amount) {
         if (isDead) return;
+        const oldHp = currentHp;
         currentHp += amount;
         if (currentHp > maxHp) currentHp = maxHp;
+        
+        const healedAmount = currentHp - oldHp;
+        if (healedAmount > 0) {
+            logEl.innerText = `Um ${healedAmount} geheilt.`;
+        } else {
+            logEl.innerText = `Schon bei voller Gesundheit!`;
+        }
         updateUI();
     }
 
     function toggleButtons(disabled) {
-        const btns = document.querySelectorAll('.btn-dmg, .btn-heal');
+        const btns = document.querySelectorAll('.btn-dmg, .btn-heal, .btn-weapon');
         btns.forEach(btn => btn.disabled = disabled);
     }
 
     function resetGame() {
         currentHp = 20;
         isDead = false;
+        equipWeapon(0); // Setzt Waffe auf "Keine" zurück
         toggleButtons(false);
         updateUI();
         statusEl.innerText = 'Bereit für den Dungeon!';
+        logEl.innerText = '';
     }
 </script>
 </body>
