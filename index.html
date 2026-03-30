@@ -6,299 +6,230 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Scoundrel">
-    <title>Scoundrel Tracker</title>
+    <title>Scoundrel Tracker Pro</title>
     <style>
         :root {
             --card-bg: #fdfdfd;
             --table-green: #35654d;
             --spade-black: #2b2b2b;
             --heart-red: #d32f2f;
+            --diamond-blue: #0277bd;
         }
         body {
             background-color: var(--table-green);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
             touch-action: manipulation;
-            padding: 20px 0; /* Etwas Platz nach oben und unten für kleine Bildschirme */
         }
         .playing-card {
             background-color: var(--card-bg);
-            width: 90%;
+            width: 92%;
             max-width: 400px;
             border-radius: 15px;
-            padding: 25px 20px;
+            padding: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             border: 2px solid #ddd;
             text-align: center;
             position: relative;
         }
-        /* Deko für die Kartenecken */
-        .playing-card::before, .playing-card::after {
-            content: "♠";
-            position: absolute;
-            font-size: 24px;
-            color: #e0e0e0;
-        }
-        .playing-card::before { top: 10px; left: 15px; }
-        .playing-card::after { bottom: 10px; right: 15px; transform: rotate(180deg); }
-
-        h1 { 
-            margin-top: 0; 
-            color: var(--spade-black); 
-            font-weight: 800; 
-            letter-spacing: 2px;
-            font-size: 1.5rem;
-        }
+        h1 { margin: 0; color: var(--spade-black); font-size: 1.2rem; letter-spacing: 2px; }
+        
         .hp-display {
-            font-size: 5rem;
+            font-size: 4.5rem;
             font-weight: bold;
             color: var(--heart-red);
-            margin: 5px 0;
             line-height: 1;
+            margin: 5px 0;
         }
-        .status { 
-            font-size: 1rem; 
-            font-weight: bold; 
-            min-height: 24px; 
-            color: var(--spade-black); 
-            margin-bottom: 10px;
-        }
-        .combat-log {
-            font-size: 0.9rem;
-            color: #666;
-            min-height: 20px;
-            margin-bottom: 15px;
-            font-style: italic;
-        }
+        
+        .status-container { min-height: 50px; margin-bottom: 10px; }
+        .status { font-weight: bold; font-size: 0.95rem; }
+        .log { font-size: 0.8rem; color: #666; font-style: italic; margin-top: 4px; }
 
         .section-title { 
-            font-size: 1rem; 
-            margin-top: 15px; 
-            margin-bottom: 10px; 
+            font-size: 0.9rem; 
+            margin: 12px 0 8px 0; 
             font-weight: bold; 
-            color: var(--spade-black); 
-            border-bottom: 1px solid #ccc; 
-            padding-bottom: 5px;
-            text-align: left;
-            display: flex;
+            border-bottom: 1px solid #eee; 
+            display: flex; 
             justify-content: space-between;
         }
 
-        .btn-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 6px;
-            margin-bottom: 10px;
-        }
+        .btn-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
         
         button {
             background: white;
             border: 2px solid;
-            border-radius: 8px;
+            border-radius: 6px;
             padding: 8px 0;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: bold;
-            cursor: pointer;
-            transition: all 0.1s;
             min-height: 40px;
         }
-        button:active { transform: scale(0.92); }
-        button:disabled { opacity: 0.4; pointer-events: none; }
-
-        /* Waffe (Karo) */
-        .btn-weapon { color: var(--heart-red); border-color: var(--heart-red); }
-        .btn-weapon.active { background-color: var(--heart-red); color: white; transform: scale(1.05); box-shadow: 0 2px 8px rgba(211, 47, 47, 0.4); }
+        button:active { transform: scale(0.95); }
         
-        /* Schaden (Pik/Kreuz) */
+        .btn-weapon { color: var(--diamond-blue); border-color: var(--diamond-blue); }
+        .btn-weapon.active { background: var(--diamond-blue); color: white; }
+        
         .btn-dmg { color: var(--spade-black); border-color: var(--spade-black); }
-        .btn-dmg:active { background-color: var(--spade-black); color: white; }
-        .btn-dmg.face-card { font-size: 0.85rem; } /* Etwas kleinere Schrift für Bube, Dame, etc. */
-
-        /* Heilung (Herz) */
         .btn-heal { color: var(--heart-red); border-color: var(--heart-red); }
-        .btn-heal:active { background-color: var(--heart-red); color: white; }
 
-        .reset-btn {
-            background-color: var(--spade-black);
-            color: white;
-            width: 100%;
-            border: none;
-            margin-top: 15px;
-            font-size: 1.1rem;
-            border-radius: 8px;
-            padding: 12px;
-        }
-        .reset-btn:active { background-color: #000; }
+        .controls { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 15px; }
+        .undo-btn { background: #888; color: white; border: none; border-radius: 6px; }
+        .reset-btn { background: var(--spade-black); color: white; border: none; border-radius: 6px; padding: 12px; }
     </style>
 </head>
 <body>
 
 <div class="playing-card">
-    <h1>SCOUNDREL</h1>
+    <h1>SCOUNDREL TRACKER</h1>
     <div class="hp-display" id="hp">20</div>
-    <div class="status" id="status">Bereit für den Dungeon!</div>
-    <div class="combat-log" id="log"></div>
+    
+    <div class="status-container">
+        <div class="status" id="status">Viel Glück!</div>
+        <div class="log" id="log">Wähle eine Waffe oder greife an.</div>
+    </div>
 
     <div class="section-title">
-        <span>♦️ Waffe (ausgerüstet)</span>
-        <span id="weapon-display">0</span>
+        <span>♦️ WAFFE (Karo)</span>
+        <span id="weapon-info">Keine</span>
     </div>
     <div class="btn-grid" id="weapon-grid">
-        <button class="btn-weapon active" id="btn-wpn-0" onclick="equipWeapon(0)">Keine</button>
+        <button class="btn-weapon active" id="btn-wpn-0" onclick="equipWeapon(0)">0</button>
     </div>
 
-    <div class="section-title">♠️/♣️ Schaden (Monster)</div>
+    <div class="section-title">♠️/♣️ MONSTER (Schaden)</div>
     <div class="btn-grid" id="dmg-grid"></div>
 
-    <div class="section-title">♥️ Heilung Tränke</div>
+    <div class="section-title">♥️ TRÄNKE (Heilung)</div>
     <div class="btn-grid" id="heal-grid"></div>
 
-    <button class="reset-btn" onclick="resetGame()">Neues Spiel</button>
+    <div class="controls">
+        <button class="undo-btn" onclick="undo()">↩ Zurück</button>
+        <button class="reset-btn" onclick="resetGame()">Neues Spiel</button>
+    </div>
 </div>
 
 <script>
-    let currentHp = 20;
-    const maxHp = 20;
-    let currentWeapon = 0;
-    let isDead = false;
+    let state = {
+        hp: 20,
+        weapon: 0,
+        lastMonsterValue: 0,
+        log: "Viel Glück!",
+        status: "Bereit!",
+        isDead: false
+    };
+    let history = [];
 
-    const hpEl = document.getElementById('hp');
-    const statusEl = document.getElementById('status');
-    const logEl = document.getElementById('log');
-    const weaponDisplay = document.getElementById('weapon-display');
-
-    // --- Waffen-Buttons (2-10) generieren ---
-    const weaponGrid = document.getElementById('weapon-grid');
-    for (let i = 2; i <= 10; i++) {
-        let btn = document.createElement('button');
-        btn.className = 'btn-weapon';
-        btn.id = 'btn-wpn-' + i;
-        btn.innerText = i;
-        btn.onclick = () => equipWeapon(i);
-        weaponGrid.appendChild(btn);
+    function saveState() {
+        history.push(JSON.stringify(state));
+        if (history.length > 20) history.shift();
     }
 
-    // --- Schaden-Buttons (1-14) generieren ---
-    const dmgGrid = document.getElementById('dmg-grid');
-    for (let i = 1; i <= 14; i++) {
-        let btn = document.createElement('button');
-        btn.className = 'btn-dmg';
-        
-        // Bildkarten benennen
-        if (i === 11) { btn.innerText = 'Bube'; btn.classList.add('face-card'); }
-        else if (i === 12) { btn.innerText = 'Dame'; btn.classList.add('face-card'); }
-        else if (i === 13) { btn.innerText = 'König'; btn.classList.add('face-card'); }
-        else if (i === 14) { btn.innerText = 'Ass'; btn.classList.add('face-card'); }
-        else { btn.innerText = i; }
-
-        btn.onclick = () => takeDamage(i, btn.innerText);
-        dmgGrid.appendChild(btn);
+    function undo() {
+        if (history.length > 0) {
+            state = JSON.parse(history.pop());
+            updateUI();
+        }
     }
 
-    // --- Heilungs-Buttons (2-10) generieren ---
-    const healGrid = document.getElementById('heal-grid');
-    for (let i = 2; i <= 10; i++) {
-        let btn = document.createElement('button');
-        btn.className = 'btn-heal';
-        btn.innerText = '+' + i;
-        btn.onclick = () => heal(i);
-        healGrid.appendChild(btn);
+    // UI Generierung
+    const wGrid = document.getElementById('weapon-grid');
+    for(let i=2; i<=10; i++) {
+        let b = document.createElement('button');
+        b.className = 'btn-weapon'; b.id = 'btn-wpn-'+i; b.innerText = i;
+        b.onclick = () => equipWeapon(i); wGrid.appendChild(b);
+    }
+
+    const dGrid = document.getElementById('dmg-grid');
+    const face = {11:'J', 12:'Q', 13:'K', 14:'A'};
+    for(let i=1; i<=14; i++) {
+        let b = document.createElement('button');
+        b.className = 'btn-dmg'; b.innerText = face[i] || i;
+        b.onclick = () => takeDamage(i, b.innerText); dGrid.appendChild(b);
+    }
+
+    const hGrid = document.getElementById('heal-grid');
+    for(let i=2; i<=10; i++) {
+        let b = document.createElement('button');
+        b.className = 'btn-heal'; b.innerText = '+'+i;
+        b.onclick = () => heal(i); hGrid.appendChild(b);
+    }
+
+    function equipWeapon(val) {
+        if (state.isDead) return;
+        saveState();
+        state.weapon = val;
+        state.lastMonsterValue = 0; // Reset Abnutzung bei neuer Waffe
+        state.log = val > 0 ? `Waffe (${val}) bereit.` : "Faustkampf aktiv.";
+        updateUI();
+    }
+
+    function takeDamage(val, name) {
+        if (state.isDead) return;
+        saveState();
+
+        let usedWeapon = false;
+        let finalDmg = val;
+
+        if (state.weapon > 0) {
+            if (val < state.lastMonsterValue || state.lastMonsterValue === 0) {
+                finalDmg = Math.max(0, val - state.weapon);
+                state.lastMonsterValue = val;
+                usedWeapon = true;
+            } else {
+                state.log = `Waffe zu schwach für ${name}! Faustkampf!`;
+            }
+        }
+
+        state.hp = Math.max(0, state.hp - finalDmg);
+        if (usedWeapon) {
+            state.log = `Waffe genutzt gegen ${name}. Schaden: ${finalDmg}`;
+        } else if (state.hp > 0 && state.weapon > 0 && val >= state.lastMonsterValue && state.lastMonsterValue !== 0) {
+            // Log wurde oben bereits gesetzt
+        } else {
+            state.log = `Faustkampf gegen ${name}. Schaden: ${val}`;
+        }
+
+        if (state.hp <= 0) { state.isDead = true; state.status = "GESTORBEN!"; }
+        updateUI();
+    }
+
+    function heal(val) {
+        if (state.isDead) return;
+        saveState();
+        let old = state.hp;
+        state.hp = Math.min(20, state.hp + val);
+        state.log = `Trank genutzt (+${state.hp - old} HP).`;
+        updateUI();
     }
 
     function updateUI() {
-        hpEl.innerText = currentHp;
-        if (currentHp === 0) {
-            isDead = true;
-            hpEl.innerText = '💀';
-            statusEl.innerText = 'Du bist tot. Spiel vorbei!';
-            statusEl.style.color = 'var(--heart-red)';
-            toggleButtons(true);
-        } else {
-            statusEl.style.color = 'var(--spade-black)';
-            if (currentHp === maxHp) {
-                statusEl.innerText = 'Volle Gesundheit!';
-            } else if (currentHp <= 5) {
-                statusEl.innerText = 'Achtung, fast tot!';
-                statusEl.style.color = 'var(--heart-red)';
-            } else {
-                statusEl.innerText = 'Kämpfe weiter!';
-            }
-        }
-    }
-
-    function equipWeapon(value) {
-        if (isDead) return;
-        currentWeapon = value;
-        weaponDisplay.innerText = value > 0 ? value : 'Keine';
+        document.getElementById('hp').innerText = state.isDead ? "💀" : state.hp;
+        document.getElementById('status').innerText = state.status;
+        document.getElementById('log').innerText = state.log;
+        document.getElementById('weapon-info').innerText = state.weapon > 0 ? 
+            `${state.weapon} (Letztes Monster: ${state.lastMonsterValue || '-'})` : "Keine";
         
-        // Buttons visuell aktualisieren
-        document.querySelectorAll('.btn-weapon').forEach(btn => btn.classList.remove('active'));
-        document.getElementById('btn-wpn-' + value).classList.add('active');
+        document.querySelectorAll('.btn-weapon').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-wpn-' + state.weapon).classList.add('active');
         
-        if (value === 0) {
-            logEl.innerText = "Waffe abgelegt.";
-        } else {
-            logEl.innerText = `Waffe mit Stärke ${value} ausgerüstet.`;
-        }
-    }
-
-    function takeDamage(cardValue, cardName) {
-        if (isDead) return;
-        
-        // Waffe vom Schaden abziehen (min. 0)
-        let actualDamage = cardValue - currentWeapon;
-        if (actualDamage < 0) actualDamage = 0;
-
-        currentHp -= actualDamage;
-        if (currentHp < 0) currentHp = 0;
-
-        // Log aktualisieren
-        if (currentWeapon > 0) {
-            if (actualDamage === 0) {
-                logEl.innerText = `Monster (${cardName}) komplett abgewehrt!`;
-            } else {
-                logEl.innerText = `Monster (${cardName}) macht ${actualDamage} Schaden (Waffe blockt ${currentWeapon}).`;
-            }
-        } else {
-            logEl.innerText = `Monster (${cardName}) macht ${actualDamage} Schaden.`;
-        }
-
-        updateUI();
-    }
-
-    function heal(amount) {
-        if (isDead) return;
-        const oldHp = currentHp;
-        currentHp += amount;
-        if (currentHp > maxHp) currentHp = maxHp;
-        
-        const healedAmount = currentHp - oldHp;
-        if (healedAmount > 0) {
-            logEl.innerText = `Um ${healedAmount} geheilt.`;
-        } else {
-            logEl.innerText = `Schon bei voller Gesundheit!`;
-        }
-        updateUI();
-    }
-
-    function toggleButtons(disabled) {
         const btns = document.querySelectorAll('.btn-dmg, .btn-heal, .btn-weapon');
-        btns.forEach(btn => btn.disabled = disabled);
+        btns.forEach(b => b.disabled = state.isDead);
     }
 
     function resetGame() {
-        currentHp = 20;
-        isDead = false;
-        equipWeapon(0); // Setzt Waffe auf "Keine" zurück
-        toggleButtons(false);
+        if(!confirm("Neues Spiel starten?")) return;
+        history = [];
+        state = { hp: 20, weapon: 0, lastMonsterValue: 0, log: "Neues Spiel begonnen.", status: "Viel Glück!", isDead: false };
         updateUI();
-        statusEl.innerText = 'Bereit für den Dungeon!';
-        logEl.innerText = '';
     }
+    
+    updateUI();
 </script>
 </body>
 </html>
