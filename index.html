@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Scoundrel">
+    <title>Scoundrel Tracker</title>
+    <style>
+        :root {
+            --card-bg: #fdfdfd;
+            --table-green: #35654d;
+            --spade-black: #2b2b2b;
+            --heart-red: #d32f2f;
+        }
+        body {
+            background-color: var(--table-green);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            touch-action: manipulation; /* Verhindert das Zoomen beim Tippen */
+        }
+        .playing-card {
+            background-color: var(--card-bg);
+            width: 90%;
+            max-width: 380px;
+            border-radius: 15px;
+            padding: 25px 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            border: 2px solid #ddd;
+            text-align: center;
+            position: relative;
+        }
+        /* Deko für die Kartenecken */
+        .playing-card::before, .playing-card::after {
+            content: "♠";
+            position: absolute;
+            font-size: 24px;
+            color: #e0e0e0;
+        }
+        .playing-card::before { top: 10px; left: 15px; }
+        .playing-card::after { bottom: 10px; right: 15px; transform: rotate(180deg); }
+
+        h1 { 
+            margin-top: 0; 
+            color: var(--spade-black); 
+            font-weight: 800; 
+            letter-spacing: 2px;
+            font-size: 1.5rem;
+        }
+        .hp-display {
+            font-size: 5rem;
+            font-weight: bold;
+            color: var(--heart-red);
+            margin: 5px 0;
+            line-height: 1;
+        }
+        .status { 
+            font-size: 1.1rem; 
+            font-weight: bold; 
+            height: 30px; 
+            color: var(--spade-black); 
+            margin-bottom: 15px;
+        }
+
+        .section-title { 
+            font-size: 1rem; 
+            margin-top: 15px; 
+            margin-bottom: 10px; 
+            font-weight: bold; 
+            color: var(--spade-black); 
+            border-bottom: 1px solid #ccc; 
+            padding-bottom: 5px;
+            text-align: left;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        button {
+            background: white;
+            border: 2px solid;
+            border-radius: 8px;
+            padding: 10px 0;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            min-height: 44px; /* Apple Standard für Touch-Buttons */
+        }
+        button:active { transform: scale(0.92); }
+        button:disabled { opacity: 0.4; pointer-events: none; }
+
+        .btn-dmg { color: var(--spade-black); border-color: var(--spade-black); }
+        .btn-dmg:active { background-color: var(--spade-black); color: white; }
+
+        .btn-heal { color: var(--heart-red); border-color: var(--heart-red); }
+        .btn-heal:active { background-color: var(--heart-red); color: white; }
+
+        .reset-btn {
+            background-color: var(--spade-black);
+            color: white;
+            width: 100%;
+            border: none;
+            margin-top: 15px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .reset-btn:active { background-color: #000; }
+    </style>
+</head>
+<body>
+
+<div class="playing-card">
+    <h1>SCOUNDREL</h1>
+    <div class="hp-display" id="hp">20</div>
+    <div class="status" id="status">Bereit für den Dungeon!</div>
+
+    <div class="section-title">♠️ Schaden (1-14)</div>
+    <div class="btn-grid" id="dmg-grid"></div>
+
+    <div class="section-title">♥️ Heilung (2-10)</div>
+    <div class="btn-grid" id="heal-grid"></div>
+
+    <button class="reset-btn" onclick="resetGame()">Neues Spiel</button>
+</div>
+
+<script>
+    let currentHp = 20;
+    const maxHp = 20;
+    const hpEl = document.getElementById('hp');
+    const statusEl = document.getElementById('status');
+    let isDead = false;
+
+    // Schaden-Buttons (1-14) generieren
+    const dmgGrid = document.getElementById('dmg-grid');
+    for (let i = 1; i <= 14; i++) {
+        let btn = document.createElement('button');
+        btn.className = 'btn-dmg';
+        btn.innerText = '-' + i;
+        btn.onclick = () => takeDamage(i);
+        dmgGrid.appendChild(btn);
+    }
+
+    // Heilungs-Buttons (2-10) generieren
+    const healGrid = document.getElementById('heal-grid');
+    for (let i = 2; i <= 10; i++) {
+        let btn = document.createElement('button');
+        btn.className = 'btn-heal';
+        btn.innerText = '+' + i;
+        btn.onclick = () => heal(i);
+        healGrid.appendChild(btn);
+    }
+
+    function updateUI() {
+        hpEl.innerText = currentHp;
+        if (currentHp === 0) {
+            isDead = true;
+            hpEl.innerText = '💀';
+            statusEl.innerText = 'Du bist tot. Spiel vorbei!';
+            statusEl.style.color = 'var(--heart-red)';
+            toggleButtons(true);
+        } else {
+            statusEl.style.color = 'var(--spade-black)';
+            if (currentHp === maxHp) {
+                statusEl.innerText = 'Volle Gesundheit!';
+            } else if (currentHp <= 5) {
+                statusEl.innerText = 'Achtung, fast tot!';
+                statusEl.style.color = 'var(--heart-red)';
+            } else {
+                statusEl.innerText = 'Kämpfe weiter!';
+            }
+        }
+    }
+
+    function takeDamage(amount) {
+        if (isDead) return;
+        currentHp -= amount;
+        if (currentHp < 0) currentHp = 0;
+        updateUI();
+    }
+
+    function heal(amount) {
+        if (isDead) return;
+        currentHp += amount;
+        if (currentHp > maxHp) currentHp = maxHp;
+        updateUI();
+    }
+
+    function toggleButtons(disabled) {
+        const btns = document.querySelectorAll('.btn-dmg, .btn-heal');
+        btns.forEach(btn => btn.disabled = disabled);
+    }
+
+    function resetGame() {
+        currentHp = 20;
+        isDead = false;
+        toggleButtons(false);
+        updateUI();
+        statusEl.innerText = 'Bereit für den Dungeon!';
+    }
+</script>
+</body>
+</html>
